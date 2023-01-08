@@ -181,7 +181,7 @@ def CBtoXY(targetCBsq, params, color):
 
 def executeMove(move, params, color, homography, cap, selectedCam):
 
-    allMotors.setColorLED(lssc.LSS_LED_Cyan)
+#    allMotors.setColorLED(lssc.LSS_LED_Cyan)
     z = params["cbHeight"] + params["pieceHeight"]
     angles_rest = (0,-1155,450,1050,0)
     gClose = -2
@@ -194,25 +194,27 @@ def executeMove(move, params, color, homography, cap, selectedCam):
 
         # Calculate position and FPC
         x0, y0 = x, y
-        x, y = CBtoXY((move[i],move[i+1]), params, color)
+        x, y = CBtoXY((move[i],move[i+1]), params, color)        
+        print("x,y",x,y)
+        
         distance = sqrt(((x0-x)**2)+((y0-y)**2))
         fpc = int(distance) + 15
-        shoulder.setFilterPositionCount(fpc)
-        elbow.setFilterPositionCount(fpc)
+        #shoulder.setFilterPositionCount(fpc)
+        #elbow.setFilterPositionCount(fpc)
     	
         # Go up
-        angles_BSEWG1 = LSS_IK([x, y, z + 1, gripState])
-        print("1) MOVE UP")
-        arrived1,issue1 = LSSA_moveMotors(angles_BSEWG1)
-        askPermision(angles_BSEWG1, arrived1, issue1, homography, cap, selectedCam)
+        #angles_BSEWG1 = LSS_IK([x, y, z + 1, gripState])
+        #print("1) MOVE UP")
+        #arrived1,issue1 = LSSA_moveMotors(angles_BSEWG1)
+        #askPermision(angles_BSEWG1, arrived1, issue1, homography, cap, selectedCam)
 
         # Go down
-        shoulder.setFilterPositionCount(15)
-        elbow.setFilterPositionCount(15)
-        angles_BSEWG2 = LSS_IK([x, y, z - 1 - goDown, gripState])
-        print("2) GO DOWN")
-        arrived2,issue2 = LSSA_moveMotors(angles_BSEWG2)
-        askPermision(angles_BSEWG2, arrived2, issue2, homography, cap, selectedCam)
+        #shoulder.setFilterPositionCount(15)
+        #elbow.setFilterPositionCount(15)
+        #angles_BSEWG2 = LSS_IK([x, y, z - 1 - goDown, gripState])
+        #print("2) GO DOWN")
+        #arrived2,issue2 = LSSA_moveMotors(angles_BSEWG2)
+        #askPermision(angles_BSEWG2, arrived2, issue2, homography, cap, selectedCam)
 
         if (i/2)%2: # Uneven move (go lower to grab the piece)
             gripState = gOpen
@@ -222,25 +224,26 @@ def executeMove(move, params, color, homography, cap, selectedCam):
             goDown = 0.5*params["pieceHeight"]
 
         # Close / Open the gripper
-        gripper.moveCH(int(gripState*10), 500)
-        time.sleep(1)
-        print("3) CLOSE/OPEN the gripper\n")
+        #gripper.moveCH(int(gripState*10), 500)
+        #time.sleep(1)
+        #print("3) CLOSE/OPEN the gripper\n")
         
         # Go up
-        angles_BSEWG3 = LSS_IK([x, y, z + 1, gripState])
-        print("4) GO UP")
-        arrived3,issue3 = LSSA_moveMotors(angles_BSEWG3)
-        askPermision(angles_BSEWG3, arrived3, issue3, homography, cap, selectedCam)
+        #angles_BSEWG3 = LSS_IK([x, y, z + 1, gripState])
+        #print("4) GO UP")
+        #arrived3,issue3 = LSSA_moveMotors(angles_BSEWG3)
+        #askPermision(angles_BSEWG3, arrived3, issue3, homography, cap, selectedCam)
 
     # Go back to resting position and go limp
     distance = sqrt(((x)**2)+((y)**2))
-    fpc = int(distance) + 15
-    shoulder.setFilterPositionCount(fpc)
-    elbow.setFilterPositionCount(fpc)
-    print("5) REST")
-    moveState,_ = LSSA_moveMotors(angles_rest)
-    allMotors.limp()
-    allMotors.setColorLED(lssc.LSS_LED_Black)
+    #fpc = int(distance) + 15
+    #shoulder.setFilterPositionCount(fpc)
+    #elbow.setFilterPositionCount(fpc)
+    #print("5) REST")
+    moveState =1
+    #moveState,_ = LSSA_moveMotors(angles_rest)
+    #allMotors.limp()
+    #allMotors.setColorLED(lssc.LSS_LED_Black)
 
     return(moveState)
 

@@ -116,6 +116,7 @@ def pcTurn(board,engine):
     
     command = ""
     pcMove = engine.play(board, cl.chess.engine.Limit(time=1))
+    print('pcMove',pcMove)
     sequence = cl.sequenceGenerator(pcMove.move.uci(), board)
     
     window.FindElement(key = "gameMessage").Update(sequence["type"])
@@ -134,6 +135,8 @@ def pcTurn(board,engine):
         speakThread.start()
         
     command = ""
+    print('sequence["seq"]',sequence["seq"])
+    #MJ - Comment out robot move below and add our own?
     ac.executeMove(sequence["seq"], physicalParams, playerColor, homography, cap, selectedCam)
     board.push(pcMove.move)
     updateBoard(sequence, board)
@@ -611,7 +614,7 @@ def phisicalConfig ():
     windowName = "Chessboard parameters"
     robotParamLayout= [[sg.Text('Insert the physical dimensions in inches',justification='center', font='Any 14', pad=(10,10))], 
                        [sg.Spin([sz/100 for sz in range(1, 1000)], initial_value=physicalParams["baseradius"], font='Any 11'),sg.Text('Base Radius', pad=(0,0))],
-                        [sg.Spin([sz/100 for sz in range(1, 1000)], initial_value=physicalParams["cbFrame"], font='Any 11'),sg.Text('Chess Board Frame', pad=(0,0))],
+                        [sg.Spin([sz/100 for sz in range(1, 2000)], initial_value=physicalParams["cbFrame"], font='Any 11'),sg.Text('Chess Board Frame', pad=(0,0))],
                         [sg.Spin([sz/100 for sz in range(1, 1000)], initial_value=physicalParams["sqSize"], font='Any 11'),sg.Text('Square Size', pad=(0,0))],
                         [sg.Spin([sz/100 for sz in range(1, 1000)], initial_value=physicalParams["cbHeight"], font='Any 11'),sg.Text('Chess Board Height', pad=(0,0))],
                         [sg.Spin([sz/100 for sz in range(1, 1000)], initial_value=physicalParams["pieceHeight"], font='Any 11'),sg.Text('Tallest Piece Height', pad=(0,0))],
@@ -623,10 +626,10 @@ def phisicalConfig ():
         button,value = robotParamWindow.Read()
         if button == "Save":
             physicalParams = {"baseradius": value[0],
-                    "cbFrame":value[1],
-                    "sqSize": value[2],
-                    "cbHeight":value[3],
-                    "pieceHeight": value[4]}
+            "cbFrame":value[1],
+            "sqSize": value[2],
+            "cbHeight":value[3],
+            "pieceHeight": value[4]}
             outfile = open('params.txt', 'w')
             json.dump(physicalParams, outfile)
             break
@@ -640,9 +643,10 @@ window = sg.Window('ChessRobot', default_button_element_size=(12,1), auto_size_b
 
 def speak(command):
     pygame.mixer.init()
-    filePath = str(pathlib.Path().absolute())+"/audio/"
-    pygame.mixer.music.load(filePath+command+".mp3")
-    pygame.mixer.music.play()
+    # filePath = str(pathlib.Path().absolute())+"\\"+ "audio" + "\\"
+    # print("filePath:", filePath+command+".mp3")
+    # pygame.mixer.music.load(filePath+command+".mp3")
+    # pygame.mixer.music.play()   
 
 def main():
     global playerColor
@@ -741,6 +745,12 @@ def main():
                 currentIMG = takePIC()
                 curIMG = vm.applyHomography(currentIMG,homography)
                 curIMG = vm.applyRotation(curIMG,rotMat)
+                
+                # cv2.imshow('prevIMG', prevIMG)
+                # cv2.imshow('curIMG', curIMG)                
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+                
                 squares = vm.findMoves(prevIMG, curIMG)
                 if playerTurn(board, squares):
                     state = "pcTurn"

@@ -85,7 +85,10 @@ def findMoves(img1, img2):
     for t in range(3,1,-1):
         if largest[t] < thresh:
             coordinates.pop()
-    
+    #MJ: Learning
+    print("\n")
+    print("###########################################################")    
+    print("Detected move coordinates ['to','from':",coordinates)
     return(coordinates)
 
 def safetoMove(H, cap, selectedCam):
