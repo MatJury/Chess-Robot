@@ -14,6 +14,9 @@ import ArmControl as ac
 import lss_const as lssc
 import pygame
 import pathlib
+import stream_tinker as depthCam
+import winsound
+import requests
 
 try:
     from picamera.array import PiRGBArray
@@ -88,7 +91,7 @@ prevIMG = []
 chessRoute = ""
 detected = True
 selectedCam = 0
-skillLevel = 10     # Chess engine difficulty level
+skillLevel = 0     # Chess engine difficulty level
 cap = cv2.VideoCapture()
 rotMat = vm.np.zeros((2,2))
 physicalParams = {"baseradius": 0.00,
@@ -331,8 +334,8 @@ def sideConfig(): # gameState: sideConfig
         if button in (None, 'Exit'): # MAIN WINDOW
             state = "stby"
             newGameState = "config"
-            break   
-
+            break
+        
     newGameWindow.close()
 
 def ocupiedBoard(): # gameState: ocupiedBoard
@@ -353,7 +356,7 @@ def ocupiedBoard(): # gameState: ocupiedBoard
         button,value = newGameWindow.Read(timeout = 10)
 
         if detected:    
-            frame = takePIC()
+            frame = takePIC_RGB()
             prevIMG = vm.applyHomography(frame,homography)
             imgbytes = cv2.imencode('.png', prevIMG)[1].tobytes()
             newGameWindow.FindElement('boardVideo').Update(data=imgbytes)
@@ -391,13 +394,15 @@ def calibration(): # gameState: calibration
         button,value = newGameWindow.Read(timeout = 10)
 
         if detected:    
-            frame = takePIC()
+            frame = takePIC_RGB()
             imgbytes = cv2.imencode('.png', frame)[1].tobytes()  
             newGameWindow.FindElement('boardVideo').Update(data=imgbytes)
             homography = []
             retIMG, homography = vm.findTransformation(frame,cbPattern)
             if retIMG:
                 newGameWindow.FindElement('calibrationBoard').Update("Camera calibration successful. Please press Next")
+                newGameState = "ocupiedBoard"
+                break
             else:
                 newGameWindow.FindElement('calibrationBoard').Update("Please adjust your camera and remove any chess piece")
 
@@ -425,38 +430,45 @@ def newGameWindow (): # gameState: config
     global cap
     global selectedCam
     global skillLevel
+    
+    cap = initCam(selectedCam)
+    newGameState = "calibration"
+    playerColor = True
+#                 skillLevel = value["enginelevel"]*2
+    gameTime = float(1000000)
 
-    windowName = "Configuration"
-    frame_layout = [[sg.Radio('RPi Cam', group_id='grp', default = True, key = "rpicam"), sg.VerticalSeparator(pad=None), sg.Radio('USB0', group_id='grp', key = "usb0"), sg.Radio('USB1', group_id='grp', key = "usb1")]]
 
-    initGame = [[sg.Text('Game Parameters', justification='center', pad = (25,(5,15)), font='Any 15')],
-                [sg.CBox('Play as White', key='userWhite', default = playerColor)],
-                [sg.Spin([sz for sz in range(1, 300)], initial_value=10, font='Any 11',key='timeInput'),sg.Text('Game time (min)', pad=(0,0))],
-                [sg.Combo([sz for sz in range(1, 11)], default_value=10, key="enginelevel"),sg.Text('Engine skill level', pad=(0,0))],
-                [sg.Frame('Camera Selection', frame_layout, pad=(0, 10), title_color='white')],
-                [sg.Text('_'*30)],
-                [sg.Button("Exit"), sg.Submit("Next")]]
-    windowNewGame = sg.Window(windowName, default_button_element_size=(12,1), auto_size_buttons=False, icon='interface_images/robot_icon.ico').Layout(initGame)
-    while True:
-        button,value = windowNewGame.Read()
-        if button == "Next":
-            if value["rpicam"] == True:
-                selectedCam = 0
-            elif value["usb0"] == True:
-                selectedCam = 1
-            elif value["usb1"] == True:
-                selectedCam = 2
-            cap = initCam(selectedCam)
-            if detected:
-                newGameState = "calibration"
-                playerColor = value["userWhite"]
-                skillLevel = value["enginelevel"]*2
-                gameTime = float(value["timeInput"]*60)
-            break
-        if button in (None, 'Exit'): # MAIN WINDOW
-            state = "stby"
-            break   
-    windowNewGame.close() 
+#     windowName = "Configuration"
+#     frame_layout = [[sg.Radio('RPi Cam', group_id='grp', key = "rpicam"), sg.VerticalSeparator(pad=None), sg.Radio('USB0', group_id='grp', default = True, key = "usb0"), sg.Radio('USB1', group_id='grp', key = "usb1")]]
+# 
+#     initGame = [[sg.Text('Game Parameters', justification='center', pad = (25,(5,15)), font='Any 15')],
+#                 [sg.CBox('Play as White', key='userWhite', default = playerColor)],
+#                 [sg.Spin([sz for sz in range(1, 300)], initial_value=10, font='Any 11',key='timeInput'),sg.Text('Game time (min)', pad=(0,0))],
+#                 [sg.Combo([sz for sz in range(1, 11)], default_value=10, key="enginelevel"),sg.Text('Engine skill level', pad=(0,0))],
+#                 [sg.Frame('Camera Selection', frame_layout, pad=(0, 10), title_color='white')],
+#                 [sg.Text('_'*30)],
+#                 [sg.Button("Exit"), sg.Submit("Next")]]
+#     windowNewGame = sg.Window(windowName, default_button_element_size=(12,1), auto_size_buttons=False, icon='interface_images/robot_icon.ico').Layout(initGame)
+#     while True:
+#         button,value = windowNewGame.Read()
+#         if button == "Next":
+#             if value["rpicam"] == True:
+#                 selectedCam = 0
+#             elif value["usb0"] == True:
+#                 selectedCam = 1
+#             elif value["usb1"] == True:
+#                 selectedCam = 2
+#             cap = initCam(selectedCam)
+#             if detected:
+#                 newGameState = "calibration"
+#                 playerColor = value["userWhite"]
+#                 skillLevel = value["enginelevel"]*2
+#                 gameTime = float(value["timeInput"]*60)
+#             break
+#         if button in (None, 'Exit'): # MAIN WINDOW
+#             state = "stby"
+#             break   
+#     windowNewGame.close() 
 
 def coronationWindow (): # gameState: config
     global playerColor
@@ -502,17 +514,41 @@ def coronationWindow (): # gameState: config
     windowNewGame.close() 
     return pieceSelected
 
-def takePIC():  
+def takePIC_RGB():  
     global selectedCam
     global cap
-    if selectedCam:
-        for i in range(5):                    # Clear images stored in buffer
-            cap.grab()
-        _ , frame = cap.read()                # USB Cam
-    else:
-        cap.capture(rawCapture, format="bgr") # RPi Cam
-        frame = rawCapture.array
-        rawCapture.truncate(0)                # Clear the stream in preparation for the next image
+    
+    requests.delete("http://192.168.233.1")
+    time.sleep(2)
+    depthCam.post_encode_config(depthCam.frame_config_encode(1, 1, 255, 1, 2, 7, 1, 0, 0))
+
+    for i in range(5):                    # Clear images stored in buffer
+
+        p = depthCam.get_frame_from_http()
+        frame = depthCam.load_frame_RGB(p)
+    
+    freq = 3500
+    dur = 200
+    winsound.Beep(freq,dur)
+    
+    return frame
+
+def takePIC_IR():  
+    global selectedCam
+    global cap
+    
+    requests.delete("http://192.168.233.1")
+    time.sleep(3)
+    depthCam.post_encode_config(depthCam.frame_config_encode(1, 1, 255, 1, 2, 7, 1, 0, 0))
+
+    for i in range(5):                    # Clear images stored in buffer      
+        p = depthCam.get_frame_from_http()
+        frame = depthCam.load_frame_IR(p)
+
+    
+    freq = 3500
+    dur = 200
+    winsound.Beep(freq,dur)
     
     return frame
 
@@ -522,8 +558,8 @@ def quitGameWindow ():
     global cap
     windowName = "Quit Game"
     quitGame = [[sg.Text('Are you sure?',justification='center', size=(30, 1), font='Any 13')], [sg.Submit("Yes",  size=(15, 1)),sg.Submit("No", size=(15, 1))]]
-    if not selectedCam:
-        cap.close()
+#    if not selectedCam:
+#        cap.close()
     if playing:
         while True:
             windowNewGame = sg.Window(windowName, default_button_element_size=(12,1), auto_size_buttons=False, icon='interface_images/robot_icon.ico').Layout(quitGame)
@@ -579,22 +615,11 @@ def initCam(selectedCam):
     global detected
     global rawCapture
 
+    depthCam.post_encode_config(depthCam.frame_config_encode(1, 1, 255, 1, 2, 7, 1, 0, 0))
+
     button, value = window.Read(timeout=10)
-    if selectedCam: # USB Cam
-        cap = cv2.VideoCapture(selectedCam - 1)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH,640)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT,480)
-        if not cap.isOpened():
-            detected = False  
-            sg.popup_error('USB Video device not found')
-    else:           # RPi Cam
-        cap = PiCamera()
-        if not cap:
-            detected = False    
-            sg.popup_error('RPi camera module not found')
-        else:
-            cap.resolution = (640, 480)
-            rawCapture = PiRGBArray(cap, size=(640, 480))
+    p = depthCam.get_frame_from_http()      
+    cap = depthCam.load_frame_RGB(p)
     return cap
 
 def loadParams():
@@ -671,7 +696,7 @@ def main():
     blackTime = 0
     refTime = time.time()
     board = cl.chess.Board()
-
+    
     while True :
         button, value = window.Read(timeout=100)
 
@@ -723,6 +748,9 @@ def main():
                 ocupiedBoard()
             elif newGameState == "sideConfig":
                 sideConfig()
+                previousIMG = takePIC_IR()
+                prevIMG = vm.applyHomography(previousIMG,homography)
+                prevIMG = vm.applyRotation(prevIMG,rotMat)
             elif newGameState == "initGame":
                 playing = True
                 newGameState = "config"
@@ -742,14 +770,16 @@ def main():
 
         elif state == "playerTurn": # Player Turn
             if button == "clockButton":
-                currentIMG = takePIC()
+                #requests.delete('http://192.168.233.1')
+                #depthCam.post_encode_config(depthCam.frame_config_encode(1, 1, 255, 0, 2, 7, 1, 0, 0))
+                currentIMG = takePIC_IR()
                 curIMG = vm.applyHomography(currentIMG,homography)
                 curIMG = vm.applyRotation(curIMG,rotMat)
                 
-                # cv2.imshow('prevIMG', prevIMG)
-                # cv2.imshow('curIMG', curIMG)                
-                # cv2.waitKey(0)
-                # cv2.destroyAllWindows()
+                cv2.imshow('prevIMG', prevIMG)
+                cv2.imshow('curIMG', curIMG)                
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
                 
                 squares = vm.findMoves(prevIMG, curIMG)
                 if playerTurn(board, squares):
@@ -774,7 +804,7 @@ def main():
             state = "stby"         # Wait for the PC move, thread changes the state
 
         elif state == "robotMove": # Robotic arm turn
-            previousIMG = takePIC()
+            previousIMG = takePIC_IR()
             prevIMG = vm.applyHomography(previousIMG,homography)
             prevIMG = vm.applyRotation(prevIMG,rotMat)
             state = "playerTurn"

@@ -13,7 +13,12 @@ except:
 def findTransformation(img,cbPattern):
 
     patternSize = (7,7)
+
+    #For rgb
     imgGray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+    #for ir / depth frames
+    imgGray = img
 
     # Find chessboard corners
     retCB, cornersCB = cv2.findChessboardCorners(cbPattern, patternSize, cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE)
