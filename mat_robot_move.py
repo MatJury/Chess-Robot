@@ -11,13 +11,15 @@ from math import sin, cos, atan2, sqrt, atan
 
 import serial
 serialport = "COM8"  
-axistorow8 = 110  # mm
+axistorow8 = 138  # mm
 servoonleft = True
-squaresize = 32 # mm
-gripperfloatheight = 75
-grippergrabheight = -20 
+squaresize_y = 41.0 # mm
+squaresize_x = 37.25 # mm
+
+gripperfloatheight = 60
+grippergrabheight = -10
 gripperoffset = 26
-openamount = 37 #degrees
+openamount = 20 #degrees
 closeamount = 2 #degrees
 graveyard = "i6"
 msgcount = 0
@@ -99,28 +101,28 @@ def receivemsg(sp):
     sp.flush()
     print(msgcount, line)
     
-def scaraviastraight(xmm, adjymmint, zmm):
-    global elbow, oldelbow
-    #print ("elbow: " + str(elbow) + " oldelbow: " + str(oldelbow))
-    oldelbow = elbow
-    #print ("elbow: " + str(elbow) + " oldelbow: " + str(oldelbow))
-    if xmm > 0 and adjymmint < totalarmlength:
-        elbow = 0
-    
-    if xmm > 135:   # parked
-        elbow = 0
-    
-    if xmm < 0 and adjymmint < totalarmlength:
-        elbow = 1
-
-    if elbow != oldelbow:
-        print ("elbow: " + str(elbow) + " oldelbow: " + str(oldelbow))
-        #intermediate move to straight out
-        gstring = "G1" + " X0" + " Y" + str(totalarmlength) + " Z" + str(zmm) + "\r"
-        print (gstring)
-        sp.write(gstring.encode())
-        receivemsg(sp)
-        #input("press enter")
+# def scaraviastraight(xmm, adjymmint, zmm):
+#     global elbow, oldelbow
+#     #print ("elbow: " + str(elbow) + " oldelbow: " + str(oldelbow))
+#     oldelbow = elbow
+#     #print ("elbow: " + str(elbow) + " oldelbow: " + str(oldelbow))
+#     if xmm > 0 and adjymmint < totalarmlength:
+#         elbow = 0
+#     
+#     if xmm > 135:   # parked
+#         elbow = 0
+#     
+#     if xmm < 0 and adjymmint < totalarmlength:
+#         elbow = 1
+# 
+#     if elbow != oldelbow:
+#         print ("elbow: " + str(elbow) + " oldelbow: " + str(oldelbow))
+#         #intermediate move to straight out
+#         gstring = "G1" + " X0" + " Y" + str(totalarmlength) + " Z" + str(zmm) + "\r"
+#         print (gstring)
+#         sp.write(gstring.encode())
+#         receivemsg(sp)
+#         #input("press enter")
 
 def movearmcoord (xmm, ymm, zmm):  # zmm is height
     adjymmint = int(ymm)+axistorow8
@@ -207,8 +209,8 @@ def takepiece (xmm, ymm, targetpiece):
     speaker("Take piece.")
     movearmcoord (xmm, ymm, gripperfloatheight)
     pickuppiece(xmm,ymm, targetpiece)
-    gravex = (xmtrans[graveyard[0]] * squaresize)-20
-    gravey = (8-int(graveyard[1])) * squaresize
+    gravex = (xmtrans[graveyard[0]] * squaresize_x)-20
+    gravey = (8-int(graveyard[1])) * squaresize_y
     movearmcoord (gravex, gravey, gripperfloatheight)
     droppiece(gravex, gravey)
     #input("press enter")
@@ -233,11 +235,11 @@ def updateboard(source, target, boardbefore):
 
 def movepiece (sourcesquarename, targetsquarename, boardbefore):
     # called from CBint 
-    sourcexmm = xmtrans[sourcesquarename[0:1]] * squaresize
-    sourceymm = (8 - int(sourcesquarename[1:2])) * squaresize
+    sourcexmm = xmtrans[sourcesquarename[0:1]] * squaresize_x
+    sourceymm = (8 - int(sourcesquarename[1:2])) * squaresize_y
     
-    targetxmm = xmtrans[targetsquarename[0:1]] * squaresize
-    targetymm = (8 - int(targetsquarename[1:2])) * squaresize
+    targetxmm = xmtrans[targetsquarename[0:1]] * squaresize_x
+    targetymm = (8 - int(targetsquarename[1:2])) * squaresize_y
     
     # for board:
     sourcex = xtrans[sourcesquarename[0]]
@@ -274,13 +276,16 @@ def calibrategripper():
         opengripper(angle)
         #waiter(1)
 def gohome():
-    movearmcoord (180, 0, gripperfloatheight)
+    #MJ (17 Dec '23) movearmcoord (180, 0, gripperfloatheight)
+    movearmcoord (-110, -80, gripperfloatheight)
+    movearmcoord (-110, -80, grippergrabheight)
+
 
 def initsteppers():
-    time.sleep(0.2)
+    #MJ> time.sleep(0.2)
     sp.write(("G28" + "\r").encode())   # steppers off, initialize
     time.sleep(0.2)
-    receivemsg(sp)
+    (sp)
     time.sleep(0.2)
     receivemsg(sp)
     
@@ -309,15 +314,10 @@ def init():
         initsteppers()   # turn steppers off and initialize them
         steppers_on()    # prompt user to switch on steppers
 
-        if SCARA:
-            gohome()   # raises arm
-            gstring = "G1" + " X0" + " Y" + str(totalarmlength) + " Z" + str(gripperfloatheight) + "\r"
-            sp.write(gstring.encode())
-            receivemsg(sp)
-        else:
-            movearmcoord (0, (squaresize*3.5), grippergrabheight)
+        movearmcoord (0, (squaresize_y*3.5), -20)
+        closegripper(closeamount, 1)
         print("Adjust robot position slightly if not in centre of board.")
-        time.sleep(2)
+        time.sleep(15)
         gohome()
 
                       

@@ -65,7 +65,7 @@ while True:
     curIMG = vm.applyHomography(curIMG,homography)
     curIMG = vm.applyRotation(curIMG,rotMat)
     normalized_mask = np.zeros((800, 800))
-    normalizedIR = cv2.normalize(curIMG,  normalized_mask, 100,400 , cv2.NORM_MINMAX)
+    normalizedIR = cv2.normalize(curIMG,  normalized_mask, -50,500 , cv2.NORM_MINMAX)
     histIR = cv2.equalizeHist(normalizedIR)
 
     RGBIMG = takePIC_RGB()
@@ -79,11 +79,11 @@ while True:
     beta = (1.0 - alpha)
     combinned = cv2.addWeighted(histIR, alpha, histRGB, beta, 0.0)
     combinned_norm = cv2.norm(histIR,histRGB)
-    
+    combinned_histRGBandRawIR = cv2.addWeighted(curIMG, alpha, histRGB, beta, 0.0)
     count_captures += 1
     print(count_captures)
 
-#    cv2.imshow('curIMG', curIMG)                
+    cv2.imshow('curIMG', curIMG)                
 #    cv2.imshow('RGBIMG', RGBIMG)
     cv2.imshow('normalizedIR', normalizedIR)
     cv2.imshow('normalizedRGB', normalizedRGB)
@@ -91,6 +91,6 @@ while True:
     cv2.imshow('HistRGB', histRGB)
     cv2.imshow('Combinned_add', combinned)
     cv2.imshow('Combinned_norm', combinned_norm)
-
+    cv2.imshow('Combinned RGB_Hist and IR raw', combinned_histRGBandRawIR)
     cv2.waitKey(0)
     cv2.destroyAllWindows()

@@ -543,7 +543,7 @@ def acquire_image():
     
     normalized_mask = np.zeros((800, 800))
 
-    normalizedIR = cv2.normalize(frame_IR,  normalized_mask, 100,400 , cv2.NORM_MINMAX)
+    normalizedIR = cv2.normalize(frame_IR,  normalized_mask, 0, 300 , cv2.NORM_MINMAX)
     histIR = cv2.equalizeHist(normalizedIR)
 
     #normalizedRGB = cv2.normalize(RGBIMG,  normalized_mask, 100,300 , cv2.NORM_MINMAX)
@@ -554,7 +554,10 @@ def acquire_image():
     beta = (1.0 - alpha)
     combinned = cv2.addWeighted(histIR, alpha, histRGB, beta, 0.0)
     
-    return combinned
+    
+    
+    
+    return normalizedIR
 
 def takePIC_RGB():  
     global selectedCam
@@ -811,7 +814,7 @@ def main():
                 cv2.waitKey(4000)
                 cv2.destroyAllWindows()
                 
-                squares = vm.findMoves(prevIMG, curIMG)
+                squares = vm.findMoves(prevIMG, curIMG)  #MJ need to replace "vm.findMoves()" with new routinue with electronic board (A-H,1-8) extracted changes. Thats it!  :)
                 if playerTurn(board, squares):
                     state = "pcTurn"
                     if board.is_game_over():

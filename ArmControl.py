@@ -20,8 +20,8 @@ def CBtoXY(targetCBsq, params, color):
     if targetCBsq[0] == 'k':
         #x = 6 * params["sqSize"]
         #y = 6 * params["sqSize"]
-        x = 6 * mrm.squaresize
-        y = 6 * mrm.squaresize
+        x = 6 * mrm.squaresize_x
+        y = 6 * mrm.squaresize_y
     else:
         if color:         # White -> Robot color = Black
             sqletter = bletterWeight[ord(targetCBsq[0]) -97]
@@ -30,8 +30,8 @@ def CBtoXY(targetCBsq, params, color):
             sqletter = wletterWeight[ord(targetCBsq[0]) -97]
             sqNumber = int(targetCBsq[1])
 
-        y=sqNumber * mrm.squaresize - (mrm.squaresize)
-        x=sqletter * mrm.squaresize + (mrm.squaresize/2)
+        y=sqNumber * mrm.squaresize_y - (mrm.squaresize_y)
+        x=sqletter * mrm.squaresize_x + (mrm.squaresize_x/2)
 
     return(x,y)
 
@@ -53,6 +53,7 @@ def executeMove(move, params, color, homography, cap, selectedCam):
         x, y = CBtoXY((move[i],move[i+1]), params, color)                
         print("Input: move[i],move[i+1]", move[i],move[i+1])
         print("Result: x,y,x0,y0",x,y,x0,y0)
+        print('\r')
         
         mrm.movearmcoord(x,y,mrm.gripperfloatheight)
 
